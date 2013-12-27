@@ -1,0 +1,44 @@
+etcdctl setDir deis
+
+# configure chef
+etcdctl setDir deis/chef
+etcdctl set deis/chef/server-url https://api.opscode.com/organizations/opdemand
+etcdctl set deis/chef/client-name docker
+etcdctl set deis/chef/client-key `base64 ~/workspace/docker.pem`
+etcdctl set deis/chef/validation-name opdemand-validator
+etcdctl set deis/chef/validation-key `base64 ~/.chef/opdemand/opdemand-validator.pem`
+etcdctl set deis/chef/node-name docker
+
+# configure database
+etcdctl setDir deis/database
+etcdctl set deis/database/engine postgresql_psycopg2
+etcdctl set deis/database/admin-user postgres
+etcdctl set deis/database/admin-pass changeme123
+etcdctl set deis/database/host 10.0.1.8
+etcdctl set deis/database/user docker
+etcdctl set deis/database/password changeme123
+etcdctl set deis/database/name docker
+
+# configure cache
+etcdctl setDir deis/cache
+etcdctl set deis/cache/host 10.0.1.8
+etcdctl set deis/cache/port 6379
+etcdctl set deis/cache/password password
+etcdctl set deis/cache/name 0
+
+# configure controller
+etcdctl setDir deis/controller
+etcdctl set deis/controller/host 10.0.1.10
+etcdctl set deis/controller/port 8000
+etcdctl set deis/controller/secret-key 'CHANGEME_sapm$s%upvsw5l_zuy_&29rkywd^78ff(qilmw1#g'
+etcdctl set deis/controller/cm-module cm.chef
+
+# configure builder
+etcdctl setDir deis/builder
+etcdctl set deis/builder/host 10.0.1.8
+etcdctl set deis/builder/key 'CHANGEME_sapm$s%upvsw5l_zuy_&29rkywd^78ff(qilmw1#g'
+
+# configure registry
+etcdctl setDir deis/registry
+etcdctl set deis/registry/host 10.0.1.8
+

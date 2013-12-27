@@ -1,9 +1,9 @@
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "deis-node"
+  config.vm.box = "precise64"
 
   # This is a preloaded Deis Ubuntu 12.04 Precise box. It's about 1GB
-  config.vm.box_url = "https://s3-us-west-2.amazonaws.com/opdemand/deis-node.box"
+  #config.vm.box_url = "https://s3-us-west-2.amazonaws.com/opdemand/deis-node.box"
 
   # Avahi-daemon will broadcast the server's address as deis-controller.local
   config.vm.host_name = "deis-controller"
@@ -23,12 +23,26 @@ Vagrant.configure("2") do |config|
   nodes_dir = File.dirname(__FILE__) + '/contrib/vagrant/nodes'
 
   config.vm.provision :shell, inline: <<-SCRIPT
+    # install latest stable chef for subsequent provision blocks
+    sudo apt-get install -yq curl
+    chef-client -v | grep 10.14.2 && curl -L https://www.opscode.com/chef/install.sh | sudo bash
     # Avahi-daemon broadcasts the machine's hostname to local DNS.
     # Therefore 'deis-controller.local' in this case.
-    sudo service avahi-daemon restart
+    sudo apt-get install -yq avahi-daemon
     # Make a record of where the deis code base is on the host machine
     echo "#{nodes_dir}" > /home/vagrant/.host_nodes_dir
   SCRIPT
+
+  config.vm.provision "chef_client" do |chef|
+    chef.chef_server_url = "https://chefserver.local"
+    chef.validation_key_path = File.dirname(__FILE__) + '/.chef/chef-validator.pem'
+    chef.add_recipe 'deis::etcd'
+    chef.add_recipe 'deis::controller'
+    # cleanup records on teardown
+    chef.delete_node = true
+    chef.delete_client = true
+  end
+
 end
 
 # If you want to do some funky custom stuff to your box, but don't want those things tracked by git,

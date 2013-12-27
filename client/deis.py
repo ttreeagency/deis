@@ -430,7 +430,7 @@ class DeisClient(object):
             app_id = data['id']
             print("done, created {}".format(app_id))
             # add a git remote
-            hostname = urlparse.urlparse(self._settings['controller']).netloc
+            hostname = urlparse.urlparse(self._settings['controller']).netloc.split(':')[0]
             git_remote = "git@{hostname}:{app_id}.git".format(**locals())
             try:
                 subprocess.check_call(
@@ -2030,7 +2030,7 @@ def main():
     try:
         method(args)
     except EnvironmentError as err:
-        raise DocoptExit(err.message)
+        raise DocoptExit(str(err.message))
     except ResponseError as err:
         resp = err.message
         print('{} {}'.format(resp.status_code, resp.reason))

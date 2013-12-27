@@ -1,0 +1,19 @@
+#!/bin/bash
+
+discover=$(dirname "${BASH_SOURCE[0]}")/discover
+
+case $1 in
+ web)
+  docker run -t -i -rm -p ${PORT:-8000}:8000 $($discover) deis/controller
+  ;;
+ worker)
+  docker run -t -i -rm $($discover) -e C_FORCE_ROOT=1 deis/controller celery worker --app=deis --loglevel=INFO
+  ;;
+ shell)
+  docker run -t -i -rm $($discover) deis/controller bash
+  ;;
+*)
+  echo "Usage: $0 {web|worker|bash}"
+  exit 1
+  ;;
+esac

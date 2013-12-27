@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 import os.path
 import tempfile
 
-
 PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 
 DEBUG = False
@@ -150,6 +149,7 @@ INSTALLED_APPS = (
     'allauth.account',
     'guardian',
     'json_field',
+    'gunicorn',
     'rest_framework',
     'south',
     # Deis apps
@@ -249,14 +249,14 @@ LOGGING = {
     }
 }
 
-
-# celery task execution settings
-BROKER_URL = 'amqp://guest:guest@localhost:5672/'
+# celery settings
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 CELERY_IMPORTS = ('api.tasks',)
-CELERY_RESULT_BACKEND = 'amqp'
-
-# hardcode celeryd concurrency
+BROKER_URL = 'redis://{}:{}/{}'.format(
+             os.environ.get('CACHE_HOST', '127.0.0.1'),
+             os.environ.get('CACHE_PORT', 6379),
+             os.environ.get('CACHE_NAME', 0))
+CELERY_RESULT_BACKEND = BROKER_URL
 # this number should be equal to N+1, where
 # N is number of nodes in largest formation
 CELERYD_CONCURRENCY = 8
@@ -264,13 +264,32 @@ CELERYD_CONCURRENCY = 8
 # default deis settings
 DEIS_LOG_DIR = os.path.abspath(os.path.join(__file__, '..', '..', 'logs'))
 LOG_LINES = 1000
-
-# the config management module to use in api.models
-CM_MODULE = 'cm.mock'
 TEMPDIR = tempfile.mkdtemp(prefix='deis')
 
+# security keys and auth tokens
+SECRET_KEY = os.environ.get('DEIS_SECRET_KEY', 'CHANGEME_sapm$s%upvsw5l_zuy_&29rkywd^78ff(qi')
+BUILDER_KEY = os.environ.get('BUILDER_KEY', 'CHANGEME_sapm$s%upvsw5l_zuy_&29rkywd^78ff(qi')
+
+# the config management module to use in api.models
+CM_MODULE = os.environ.get('DEIS_CM_MODULE', 'cm.mock')
+
 # default providers, typically overriden in local_settings to include ec2, etc.
-PROVIDER_MODULES = ('mock',)
+PROVIDER_MODULES = ('mock', 'digitalocean', 'ec2', 'rackspace', 'static')
+
+# default to sqlite3, but allow postgresql config through envvars
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.' + os.environ.get('DATABASE_ENGINE', 'postgresql_psycopg2'),
+        'NAME': os.environ.get('DATABASE_NAME', 'deis'),
+        'USER': os.environ.get('DATABASE_USER', 'deis'),
+        'PASSWORD': os.environ.get('DATABASE_PASSWORD', 'deis'),
+        'HOST': os.environ.get('DATABASE_HOST', 'localhost'),
+    }
+}
+
+# SECURITY: change this to allowed fqdn's to prevent host poisioning attacks
+# see https://docs.djangoproject.com/en/1.5/ref/settings/#std:setting-ALLOWED_HOSTS
+ALLOWED_HOSTS = ['*']
 
 # Create a file named "local_settings.py" to contain sensitive settings data
 # such as database configuration, admin email, or passwords and keys. It
@@ -294,12 +313,6 @@ PROVIDER_MODULES = ('mock',)
 #         'PORT': '',
 #     }
 # }
-# SECRET_KEY = 'CHANGEME_sapm$s%upvsw5l_zuy_&29rkywd^78ff(qilmw1#g'
-# EMAIL_HOST = 'smtp.sendgrid.com'
-# EMAIL_PORT = 587
-# EMAIL_HOST_USER = 'foo'
-# EMAIL_HOST_PASSWORD = 'bar'
-
 
 try:
     from .local_settings import *  # @UnusedWildImport # noqa
