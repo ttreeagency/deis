@@ -220,15 +220,18 @@ LOGGING = {
             'class': 'logging.NullHandler',
         },
         'console': {
-            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
         'mail_admins': {
-            'level': 'ERROR',
             'filters': ['require_debug_false'],
             'class': 'django.utils.log.AdminEmailHandler'
-        }
+        },
+        'rsyslog': {
+            'class': 'logging.handlers.SysLogHandler',
+            'address': '/dev/log',
+            'facility': 'local0',
+        },
     },
     'loggers': {
         'django': {
@@ -242,7 +245,7 @@ LOGGING = {
             'propagate': True,
         },
         'api': {
-            'handlers': ['console', 'mail_admins'],
+            'handlers': ['console', 'rsyslog'],
             'level': 'INFO',
             'propagate': True,
         },
