@@ -1945,12 +1945,12 @@ class DeisClient(object):
         app = args.get('--app')
         if not app:
             app = self._session.app
-        response = self._dispatch('get', '/api/apps/{app}/releases'.format(**locals()))
+        response = self._dispatch('get', "/api/apps/{app}/releases".format(**locals()))
         if response.status_code == requests.codes.ok:  # @UndefinedVariable
-            print('=== {0} Releases'.format(app))
+            print("=== {} Releases".format(app))
             data = response.json()
             for item in data['results']:
-                print('{version} {created}'.format(**item))
+                print("{version} {created} {summary}".format(**item))
         else:
             raise ResponseError(response)
 

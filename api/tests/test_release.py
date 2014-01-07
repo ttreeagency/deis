@@ -147,3 +147,11 @@ class ReleaseTest(TestCase):
         release3 = self.test_release()
         release = Release.objects.get(uuid=release3['uuid'])
         self.assertEqual(str(release), "{}-v3".format(release3['app']))
+
+    def test_release_summary(self):
+        """Test the text summary of a release."""
+        release3 = self.test_release()
+        release = Release.objects.get(uuid=release3['uuid'])
+        # check that the release has push and env change messages
+        self.assertIn('autotest pushed ', release.summary)
+        self.assertIn('autotest changed (+)PATH=', release.summary)

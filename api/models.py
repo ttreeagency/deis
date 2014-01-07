@@ -23,6 +23,8 @@ from json_field.fields import JSONField  # @UnusedImport
 
 from api import fields, tasks
 from provider import import_provider_module
+from utils import dict_diff
+
 
 # import user-defined configuration management module
 CM = importlib.import_module(settings.CM_MODULE)
@@ -764,6 +766,7 @@ class Release(UuidAuditedModel):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL)
     app = models.ForeignKey('App')
     version = models.PositiveIntegerField()
+    summary = models.TextField(blank=True)
 
     config = models.ForeignKey('Config')
     build = models.ForeignKey('Build', blank=True, null=True)
@@ -776,10 +779,58 @@ class Release(UuidAuditedModel):
     def __str__(self):
         return "{0}-v{1}".format(self.app.id, self.version)
 
+    def previous(self):
+        """
+        Return the previous Release to this one.
+
+        :return: the previous :class:`Release`, or None
+        """
+        releases = self.app.release_set
+        if self.pk:
+            releases = releases.exclude(pk=self.pk)
+        try:
+            # Get the Release previous to this one
+            prev_release = releases.latest()
+        except Release.DoesNotExist:
+            prev_release = None
+        return prev_release
+
     def rollback(self):
         # create a rollback log entry
         # call run
         raise NotImplementedError
+
+    def save(self, *args, **kwargs):
+        if not self.summary:
+            prev_release = self.previous()
+            # compare this build to the previous build
+            old_build = prev_release.build if prev_release else None
+            # if the build changed, log it and who pushed it
+            if self.build != old_build and self.build.sha:
+                self.summary += "{} pushed {}".format(self.build.owner, self.build.sha)
+            # compare this config to the previous config
+            old_config = prev_release.config if prev_release else None
+            # if the config data changed, log the dict diff
+            if self.config != old_config:
+                dict1 = self.config.values
+                dict2 = old_config.values if old_config else {}
+                diff = dict_diff(dict1, dict2)
+                # try to be as succinct as possible
+                # TODO: truncate long values too?
+                added = ', '.join("(+){}={}".format(k, v)
+                                  for k, v in diff.get('added', {}).items())
+                changed = ', '.join("{}={}".format(k, v)
+                                    for k, v in diff.get('changed', {}).items())
+                deleted = ', '.join("(-){}".format(k)
+                                    for k in diff.get('deleted', {}))
+                changes = ', '.join(i for i in (added, changed, deleted) if i)
+                if changes:
+                    if self.summary:
+                        self.summary += ' and '
+                    self.summary += "{} changed {}".format(self.config.owner, changes)
+                if not self.summary:
+                    self.summary = "{} created the initial release".format(self.owner)
+        super(Release, self).save(*args, **kwargs)
 
 
 @receiver(release_signal)
